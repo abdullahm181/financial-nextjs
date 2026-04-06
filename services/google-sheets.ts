@@ -5,12 +5,8 @@ import { Transaction, TransactionType } from "@/types";
  */
 export const googleSheetsService = {
   async getTransactions(): Promise<Transaction[]> {
-    const sheetId = process.env.GOOGLE_SHEET_ID;
-    const sheetName = process.env.GOOGLE_SHEET_NAME;
-
-    if (!sheetId) {
-      throw new Error("GOOGLE_SHEET_ID is missing in environment variables.");
-    }
+    const sheetId = "122LEG0AaW8FYdTiifrQVe2Ha2Yjb3TXhImobKTl-s-4";
+    const sheetName = "TranscationTable";
 
     // Google Sheets public CSV export URL
     // Note: The sheet MUST be set to "Anyone with the link can view"
