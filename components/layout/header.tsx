@@ -83,6 +83,21 @@ export function Header() {
                   </svg>
                   Laporan Summary
                 </Link>
+                <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+                <button 
+                  onClick={async () => {
+                    await fetch('/api/login', { method: 'DELETE' });
+                    setIsMenuOpen(false);
+                    // Use window.location to ensure a full refresh and middleware check
+                    window.location.href = '/login';
+                  }}
+                  className="flex items-center w-full gap-2 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/20 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.22 5.03a.75.75 0 1 1 1.06-1.06l5.5 5.5a.75.75 0 0 1 0 1.06l-5.5 5.5a.75.75 0 1 1-1.06-1.06l4.168-4.168H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
+                  </svg>
+                  Keluar
+                </button>
               </div>
             </>
           )}

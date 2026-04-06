@@ -6,8 +6,10 @@
 
 export const ROUTES = {
   home: "/",
+  login: "/login",
   dashboard: "/dashboard",
+  summary: "/summary",
 } as const;
 
-export const DEFAULT_CURRENCY = "USD";
-export const DEFAULT_LOCALE = "en-US";
+export const DEFAULT_CURRENCY = "IDR";
+export const DEFAULT_LOCALE = "id-ID";
