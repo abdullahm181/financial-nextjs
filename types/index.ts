@@ -29,3 +29,10 @@ export type PaginatedResponse<T> = ApiResponse<T[]> & {
  * Utility: make specific keys of T optional.
  */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+// Re-export specific feature types
+export type {
+  Transaction,
+  TransactionType,
+  TransactionSummary,
+} from "./transaction";

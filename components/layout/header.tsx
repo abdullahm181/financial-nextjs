@@ -22,6 +22,12 @@ export function Header() {
           >
             Dashboard
           </Link>
+          <Link
+            href="/dashboard/transactions"
+            className="text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+          >
+            Transaksi
+          </Link>
         </nav>
       </div>
     </header>

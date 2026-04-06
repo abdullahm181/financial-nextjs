@@ -22,6 +22,12 @@ export default function DashboardLayout({
             >
               Overview
             </a>
+            <a
+              href="/dashboard/transactions"
+              className="rounded-lg px-3 py-2 transition-colors hover:bg-zinc-200/60 hover:text-zinc-900 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-50"
+            >
+              Transaksi
+            </a>
           </nav>
         </aside>
 
