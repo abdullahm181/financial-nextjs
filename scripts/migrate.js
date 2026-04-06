@@ -7,16 +7,10 @@ async function runMigration() {
   const sql = neon(DATABASE_URL);
 
   try {
-    console.log("Running migration...");
-    await sql`
-      CREATE TABLE IF NOT EXISTS chat_history (
-        id SERIAL PRIMARY KEY,
-        sender VARCHAR(10) NOT NULL CHECK (sender IN ('user', 'bot')),
-        message TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      )
-    `;
-    console.log("✅ Migration successful! Table 'chat_history' is ready.");
+    console.log("Dropping old chat_history & transactions table if exists...");
+    await sql`DROP TABLE IF EXISTS chat_history`;
+    await sql`DROP TABLE IF EXISTS transactions`;
+    console.log("Success dropping chat_history & transactions table");
   } catch (error) {
     console.error("❌ Migration failed:");
     console.error(error);

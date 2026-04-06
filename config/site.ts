@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "Financial App",
+  name: "SARIMIN",
   description: "Personal financial management application",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   links: {
