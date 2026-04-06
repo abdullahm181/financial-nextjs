@@ -1,7 +1,7 @@
 import { ParsedTransaction } from "@/types";
 
 const GOOGLE_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxyokxGBO4iYJ8zQzQ_j3lapl2XHK-eJYkfxv0hxb0oHXdmypMkfS21gY3G3SxODpzx/exec";
+  "https://script.google.com/macros/s/AKfycbwDX4-6mjifEtl0CF7sFnTdEUEoQDraL_rwiuSvbXUCN1VCai9zKDisePg7U4AXH6qp/exec";
 
 /**
  * Sends transaction data to a Google Apps Script Web App
