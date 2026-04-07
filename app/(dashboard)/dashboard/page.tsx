@@ -167,6 +167,9 @@ export default function DashboardPage() {
     group.transactions.push(t);
   });
   
+  // Sort by date descending
+  groupedDates.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+  
   const toggleDateGroup = (title: string) => {
     setCollapsedDates(prev => ({ ...prev, [title]: !prev[title] }));
   };
