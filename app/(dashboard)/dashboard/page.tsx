@@ -248,6 +248,7 @@ export default function DashboardPage() {
                   <option value="B: PENGELUARAN~Belanja Bulanan">&nbsp;&nbsp;&nbsp;&nbsp;Belanja Bulanan</option>
                   <option value="B: PENGELUARAN~Makan di luar">&nbsp;&nbsp;&nbsp;&nbsp;Makan di luar</option>
                   <option value="B: PENGELUARAN~Transportasi/Bensin">&nbsp;&nbsp;&nbsp;&nbsp;Transportasi/Bensin</option>
+                  <option value="B: PENGELUARAN~Motor">&nbsp;&nbsp;&nbsp;&nbsp;Motor</option>
                   <option value="B: PENGELUARAN~Hobi / rekreasi">&nbsp;&nbsp;&nbsp;&nbsp;Hobi / rekreasi</option>
                   <option value="B: PENGELUARAN~Perawatan">&nbsp;&nbsp;&nbsp;&nbsp;Perawatan</option>
                   <option value="B: PENGELUARAN~Nongkrong/Hiburan/Teman">&nbsp;&nbsp;&nbsp;&nbsp;Nongkrong/Hiburan/Teman</option>
