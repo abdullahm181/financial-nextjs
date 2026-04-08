@@ -35,7 +35,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-white/80 backdrop-blur-lg dark:bg-zinc-950/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <Link
           href={ROUTES.home}

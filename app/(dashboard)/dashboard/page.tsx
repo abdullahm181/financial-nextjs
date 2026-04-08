@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import Link from "next/link";
 import { cn } from "@/lib";
+import { BUDGET_PLAN } from "@/lib/budget-plan";
 
 type TransactionRecord = {
   id: number;
@@ -134,6 +135,9 @@ export default function DashboardPage() {
     ? (serverTotalPengeluaran / serverTotalPemasukan) * 100
     : 0;
 
+  const BUDGET_PENGELUARAN = BUDGET_PLAN["TOTAL PENGELUARAN"] ?? 0;
+  const saldoBisaDiPakai = BUDGET_PENGELUARAN - serverTotalPengeluaran;
+
   const fmt = (num: number) => num.toLocaleString("id-ID");
   const formatDateShort = (iso: string) => {
     if (!iso) return "";
@@ -248,8 +252,8 @@ export default function DashboardPage() {
                   <option value="B: PENGELUARAN~Belanja Bulanan">&nbsp;&nbsp;&nbsp;&nbsp;Belanja Bulanan</option>
                   <option value="B: PENGELUARAN~Makan di luar">&nbsp;&nbsp;&nbsp;&nbsp;Makan di luar</option>
                   <option value="B: PENGELUARAN~Transportasi/Bensin">&nbsp;&nbsp;&nbsp;&nbsp;Transportasi/Bensin</option>
-                  <option value="B: PENGELUARAN~Motor">&nbsp;&nbsp;&nbsp;&nbsp;Motor</option>
                   <option value="B: PENGELUARAN~Hobi / rekreasi">&nbsp;&nbsp;&nbsp;&nbsp;Hobi / rekreasi</option>
+                  <option value="B: PENGELUARAN~Motor">&nbsp;&nbsp;&nbsp;&nbsp;Motor</option>
                   <option value="B: PENGELUARAN~Perawatan">&nbsp;&nbsp;&nbsp;&nbsp;Perawatan</option>
                   <option value="B: PENGELUARAN~Nongkrong/Hiburan/Teman">&nbsp;&nbsp;&nbsp;&nbsp;Nongkrong/Hiburan/Teman</option>
                   <option value="B: PENGELUARAN~Kantor">&nbsp;&nbsp;&nbsp;&nbsp;Kantor</option>
@@ -439,14 +443,27 @@ export default function DashboardPage() {
           
           <div className="flex items-center gap-3 shrink-0">
             {!isSummaryVisible && (
-              <div className="flex flex-col items-end justify-center">
-                <span className="text-[8px] sm:text-xs font-medium text-zinc-500 uppercase leading-tight mb-1">
-                  System : <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300">Rp {fmt(saldoSystem)}</span>
-                </span>
-                <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded leading-none">
-                  <span className="text-[8px] font-bold text-emerald-600/80 dark:text-emerald-400/80 uppercase">Total :</span>
-                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">Rp {fmt(totalUang)}</span>
+              <div className="flex flex-col items-end justify-center gap-0.5">
+                <div className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-md leading-none",
+                  saldoBisaDiPakai >= 0
+                    ? "bg-emerald-50 dark:bg-emerald-900/20"
+                    : "bg-rose-50 dark:bg-rose-900/20"
+                )}>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase",
+                    saldoBisaDiPakai >= 0 ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-rose-600/80 dark:text-rose-400/80"
+                  )}>Sisa :</span>
+                  <span className={cn(
+                    "text-[14px] font-black",
+                    saldoBisaDiPakai >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  )}>
+                    {saldoBisaDiPakai < 0 ? "-" : ""}Rp {fmt(Math.abs(saldoBisaDiPakai))}
+                  </span>
                 </div>
+                <span className="text-[10px] font-bold uppercase text-black dark:text-zinc-500 leading-tight">
+                  SALDO : Rp {fmt(saldoSystem)}
+                </span>
               </div>
             )}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={cn("w-5 h-5 shrink-0 transition-transform text-zinc-400", isSummaryVisible ? "rotate-180" : "rotate-0")}>
@@ -516,6 +533,30 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Setor Tabungan <span className="font-normal text-[10px] text-zinc-400">(Bulan Ini)</span></span>
                   <span className="text-sm font-bold text-blue-600 dark:text-blue-400">Rp {fmt(serverSetorTabungan)}</span>
                 </div>
+              </div>
+
+              {/* SALDO BISA DI PAKAI */}
+              <div className={cn(
+                "col-span-2 flex justify-between items-center rounded-xl p-4 border",
+                saldoBisaDiPakai >= 0
+                  ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30"
+                  : "bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/30"
+              )}>
+                <div className="flex flex-col gap-0.5">
+                  <span className={cn(
+                    "text-xs font-bold uppercase tracking-wider",
+                    saldoBisaDiPakai >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+                  )}>SALDO BISA DI PAKAI</span>
+                  <span className="text-[10px] text-zinc-400 font-medium">
+                    Budget Pengeluaran Rp {fmt(BUDGET_PENGELUARAN)} − Aktual
+                  </span>
+                </div>
+                <span className={cn(
+                  "text-xl font-black",
+                  saldoBisaDiPakai >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                )}>
+                  {saldoBisaDiPakai < 0 ? "-" : ""}Rp {fmt(Math.abs(saldoBisaDiPakai))}
+                </span>
               </div>
 
               {/* Progress Bars / Percentages */}

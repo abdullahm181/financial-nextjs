@@ -5,6 +5,8 @@ import { TransactionRecord } from "@/services/transaction";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+import { BUDGET_PLAN } from "@/lib/budget-plan";
+
 type MonthData = {
   id: string; // The selectedMonth param e.g. "2026-04"
   monthStr: string;
@@ -186,30 +188,76 @@ export default function SummaryPage() {
     }
   };
 
-  const renderRow = (label: string, accessor: (d: MonthData) => React.ReactNode, hideIfZeroAll = false, zeroCheck?: (d: MonthData) => number, isHeader = false) => {
+  const getBudgetPlan = (label: string): string => {
+    const val = BUDGET_PLAN[label];
+    if (val === undefined || val === 0) return "-";
+    return `Rp ${fmt(val)}`;
+  };
+
+  const getBudgetPlanValue = (label: string): number => BUDGET_PLAN[label] ?? 0;
+
+  const renderRow = (
+    label: string,
+    accessor: (d: MonthData) => React.ReactNode,
+    hideIfZeroAll = false,
+    zeroCheck?: (d: MonthData) => number,
+    isHeader = false,
+    numericValue?: (d: MonthData) => number,
+    highlightMode?: "over" | "under"
+  ) => {
     if (hideIfZeroAll && zeroCheck) {
       if (dataSeries.every(d => zeroCheck(d) === 0)) return null;
     }
+    const budget = getBudgetPlanValue(label);
     return (
       <tr key={label} className={cn("group border-b border-zinc-100 dark:border-zinc-800/50", isHeader && "bg-zinc-50/50 dark:bg-zinc-800/30 font-bold")}>
         <td className="sticky left-0 z-10 py-2 pl-4 pr-4 bg-white dark:bg-zinc-900 group-hover:bg-zinc-50 dark:group-hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 text-sm truncate shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">
           {label}
         </td>
-        {dataSeries.map((d, i) => (
-          <td key={i} className="py-2 px-4 text-right tabular-nums text-zinc-800 dark:text-zinc-200 text-sm font-medium">
-            {accessor(d)}
-          </td>
-        ))}
+        <td className="sticky left-[200px] sm:left-[260px] z-10 py-2 px-4 text-right tabular-nums text-violet-700 dark:text-violet-400 text-sm font-medium bg-violet-50 dark:bg-violet-950 group-hover:bg-violet-100 dark:group-hover:bg-violet-900 transition-colors border-r border-violet-200 dark:border-violet-800 shadow-[1px_0_0_0_rgba(139,92,246,0.2)] min-w-[120px] max-w-[130px] w-[125px]">
+          {getBudgetPlan(label)}
+        </td>
+        {dataSeries.map((d, i) => {
+          const actual = numericValue ? numericValue(d) : null;
+          const pct = (budget > 0 && actual !== null) ? (actual / budget) * 100 : null;
+          const isHighlighted =
+            pct !== null &&
+            ((highlightMode === "over" && pct > 100) ||
+             (highlightMode === "under" && pct < 100));
+          return (
+            <td key={i} className={cn(
+              "py-2 px-4 text-right tabular-nums text-sm font-medium transition-colors",
+              isHighlighted
+                ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
+                : "text-zinc-800 dark:text-zinc-200"
+            )}>
+              <div className="flex flex-col items-end gap-0">
+                <span>{accessor(d)}</span>
+                {pct !== null && (
+                  <span className={cn(
+                    "text-[10px] font-bold tabular-nums leading-tight",
+                    isHighlighted ? "text-rose-500 dark:text-rose-400" : "text-zinc-400 dark:text-zinc-500"
+                  )}>
+                    {pct.toFixed(0)}%
+                  </span>
+                )}
+              </div>
+            </td>
+          );
+        })}
       </tr>
     );
   };
 
   const renderRecordRows = (records: Record<string, number>, section: "b1" | "b2" | "b4" | "c") => {
+    const highlightMode = section === "c" ? "under" : "over";
     return Object.keys(records).map((key) => {
-      if (dataSeries.every((d) => (d[section] as Record<string, number>)[key] === 0)) return null;
       return renderRow(
         key,
-        (d) => `Rp ` + fmt((d[section] as Record<string, number>)[key])
+        (d) => `Rp ` + fmt((d[section] as Record<string, number>)[key]),
+        false, undefined, false,
+        (d) => (d[section] as Record<string, number>)[key],
+        highlightMode
       );
     });
   };
@@ -219,6 +267,7 @@ export default function SummaryPage() {
       <td className="py-3 pl-4 sticky left-0 z-10 bg-inherit text-xs font-black uppercase tracking-widest shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left whitespace-nowrap">
         {label}
       </td>
+      <td className="sticky left-[200px] sm:left-[260px] z-10 bg-inherit border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
       {dataSeries.map((_, i) => (
         <td key={i} className="bg-inherit"></td>
       ))}
@@ -270,6 +319,9 @@ export default function SummaryPage() {
                             <span className="text-zinc-900 dark:text-zinc-100 font-black text-xs">SUMMARY REPORT</span>
                           </div>
                        </div>
+                    </th>
+                    <th className="sticky left-[200px] sm:left-[260px] z-40 py-4 px-4 text-right text-xs font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest min-w-[120px] max-w-[130px] w-[125px] bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 shadow-[1px_1px_0_0_rgba(139,92,246,0.25)] align-bottom">
+                      Budget Plan
                     </th>
                     {selectedMonths.map((m, idx) => (
                       <th key={idx} className="py-2 px-4 text-right border-b border-zinc-200 dark:border-zinc-700 min-w-[200px] align-top bg-zinc-100 dark:bg-zinc-800">
@@ -326,16 +378,17 @@ export default function SummaryPage() {
 
                   {/* A: PEMASUKAN */}
                   {renderSectionHeader("A: PEMASUKAN", "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/10 dark:text-emerald-400")}
-                  {renderRow("Gaji", d => `Rp ${fmt(d.gaji)}`)}
-                  {renderRow("Hutang", d => `Rp ${fmt(d.hutang)}`, true, d => d.hutang)}
-                  {renderRow("Bunga Bank", d => `Rp ${fmt(d.bungaBank)}`, true, d => d.bungaBank)}
-                  {renderRow("Lainnya", d => `Rp ${fmt(d.pemasukanLainnya)}`, true, d => d.pemasukanLainnya)}
-                  {renderRow("TOTAL PEMASUKAN", d => `Rp ${fmt(d.serverTotalPemasukan)}`, false, undefined, true)}
+                  {renderRow("Gaji", d => `Rp ${fmt(d.gaji)}`, false, undefined, false, d => d.gaji, "under")}
+                  {renderRow("Hutang", d => `Rp ${fmt(d.hutang)}`, true, d => d.hutang, false, d => d.hutang, "under")}
+                  {renderRow("Bunga Bank", d => `Rp ${fmt(d.bungaBank)}`, true, d => d.bungaBank, false, d => d.bungaBank, "under")}
+                  {renderRow("Lainnya", d => `Rp ${fmt(d.pemasukanLainnya)}`, true, d => d.pemasukanLainnya, false, d => d.pemasukanLainnya, "under")}
+                  {renderRow("TOTAL PEMASUKAN", d => `Rp ${fmt(d.serverTotalPemasukan)}`, false, undefined, true, d => d.serverTotalPemasukan, "under")}
 
                   {/* B: PENGELUARAN */}
                   {renderSectionHeader("B: PENGELUARAN", "bg-rose-50 text-rose-600 dark:bg-rose-900/10 dark:text-rose-400")}
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
                     <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B1: HIDUP KELUARGA</td>
+                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
@@ -343,6 +396,7 @@ export default function SummaryPage() {
                   
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
                     <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B2: KELUARGA INTI</td>
+                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
@@ -350,16 +404,17 @@ export default function SummaryPage() {
 
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
                     <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B4: LIBURAN & LAINNYA</td>
+                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
                   {renderRecordRows(dataSeries[0]?.b4 || {}, "b4")}
-                  {renderRow("TOTAL PENGELUARAN", d => `Rp ${fmt(d.serverTotalPengeluaran)}`, false, undefined, true)}
+                  {renderRow("TOTAL PENGELUARAN", d => `Rp ${fmt(d.serverTotalPengeluaran)}`, false, undefined, true, d => d.serverTotalPengeluaran, "over")}
 
                   {/* C: TABUNGAN */}
                   {renderSectionHeader("C: TABUNGAN", "bg-blue-50 text-blue-600 dark:bg-blue-900/10 dark:text-blue-400")}
                   {renderRecordRows(dataSeries[0]?.c || {}, "c")}
-                  {renderRow("TOTAL TABUNGAN", d => `Rp ${fmt(d.serverSetorTabungan)}`, false, undefined, true)}
+                  {renderRow("TOTAL TABUNGAN", d => `Rp ${fmt(d.serverSetorTabungan)}`, false, undefined, true, d => d.serverSetorTabungan, "under")}
 
                   {/* SUMMARY & METRICS */}
                   {renderSectionHeader("RINGKASAN & REKONSILIASI", "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300")}
@@ -374,6 +429,18 @@ export default function SummaryPage() {
                   ))}
                   {renderRow("SALDO TABUNGAN", d => `Rp ${fmt(d.serverSaldoTabungan)}`)}
                   {renderRow("TOTAL UANG", d => `Rp ${fmt(d.totalUang)}`, false, undefined, true)}
+                  {renderRow("SALDO BISA DI PAKAI", d => {
+                    const budgetPengeluaran = BUDGET_PLAN["TOTAL PENGELUARAN"] ?? 0;
+                    const saldo = budgetPengeluaran - d.serverTotalPengeluaran;
+                    return (
+                      <span className={cn(
+                        "font-black",
+                        saldo >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                      )}>
+                        {saldo < 0 ? "-" : ""}Rp {fmt(Math.abs(saldo))}
+                      </span>
+                    );
+                  }, false, undefined, true)}
                 </tbody>
               </table>
             )}
