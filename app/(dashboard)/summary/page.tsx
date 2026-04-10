@@ -36,6 +36,7 @@ type MonthData = {
   selisih: number;
   pctTabungan: number;
   pctPengeluaran: number;
+  rawTransactions: TransactionRecord[];
 };
 
 export default function SummaryPage() {
@@ -46,6 +47,7 @@ export default function SummaryPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [dataSeries, setDataSeries] = useState<MonthData[]>([]);
+  const [popupData, setPopupData] = useState<{ title: string; subtitle: string; transactions: TransactionRecord[] } | null>(null);
 
   useEffect(() => {
     async function loadAllData() {
@@ -148,7 +150,8 @@ export default function SummaryPage() {
               serverTotalPemasukan, serverTotalPengeluaran, serverSetorTabungan,
               serverSaldoTabungan, serverSaldoReal,
               b1, b2, b4, lainLainPengeluaran, c, lainLainTabungan,
-              saldoSystem, totalUang, selisih, pctTabungan, pctPengeluaran
+              saldoSystem, totalUang, selisih, pctTabungan, pctPengeluaran,
+              rawTransactions: transactions
             };
             return resData;
           })
@@ -171,6 +174,66 @@ export default function SummaryPage() {
     setSelectedMonths(copy);
   };
 
+  const handleCellDoubleClick = (label: string, d: MonthData) => {
+    let filtered = d.rawTransactions;
+    const lUp = label.toUpperCase();
+
+    const searchStart = new Date(d.cutStart); searchStart.setHours(0,0,0,0);
+    const searchEnd = new Date(d.cutEnd); searchEnd.setHours(23,59,59,999);
+    const gajiSearchStart = new Date(searchStart); gajiSearchStart.setDate(gajiSearchStart.getDate() - 1);
+    const gajiSearchEnd = new Date(searchEnd); gajiSearchEnd.setDate(gajiSearchEnd.getDate() - 1);
+
+    filtered = filtered.filter(t => {
+      const dTx = new Date(t.date);
+      dTx.setHours(0,0,0,0);
+      const parentCat = t.category.split("~")[0].trim().toUpperCase();
+      const childCat = t.category.split("~").slice(1).join("~").trim().toUpperCase();
+
+      if (lUp === "GAJI") {
+        return dTx >= gajiSearchStart && dTx <= gajiSearchEnd && parentCat === "A: PEMASUKAN" && childCat === "GAJI";
+      }
+
+      // Default date filtering for non-gaji
+      if (dTx < searchStart || dTx > searchEnd) return false;
+
+      if (lUp === "HUTANG" || lUp === "BUNGA BANK") {
+        return parentCat === "A: PEMASUKAN" && childCat === lUp;
+      }
+      if (lUp === "PEMASUKAN LAINNYA") {
+         return parentCat === "A: PEMASUKAN" && childCat !== "GAJI" && childCat !== "HUTANG" && childCat !== "BUNGA BANK";
+      }
+      if (lUp === "TOTAL PEMASUKAN") {
+         return parentCat === "A: PEMASUKAN";
+      }
+      if (lUp === "TOTAL PENGELUARAN" || lUp === "SALDO BISA DI PAKAI") {
+         return parentCat === "B: PENGELUARAN";
+      }
+      if (lUp === "TOTAL TABUNGAN") {
+         return parentCat === "C: TABUNGAN";
+      }
+      // Exact match for B: PENGELUARAN (b1, b2, b4)
+      const pengeluaranKeys = [...Object.keys(d.b1), ...Object.keys(d.b2), ...Object.keys(d.b4)].map(k => k.toUpperCase());
+      if (pengeluaranKeys.includes(lUp)) {
+         return parentCat === "B: PENGELUARAN" && childCat === lUp;
+      }
+
+      // Exact match for C: TABUNGAN (c)
+      const tabunganKeys = Object.keys(d.c).map(k => k.toUpperCase());
+      if (tabunganKeys.includes(lUp)) {
+         return parentCat === "C: TABUNGAN" && childCat === lUp;
+      }
+      
+      // Fallback for uncategorized or exact match
+      return t.category.toUpperCase().includes(lUp);
+    });
+
+    setPopupData({
+      title: label,
+      subtitle: d.monthStr,
+      transactions: filtered.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    });
+  };
+
   const removeMonth = (idx: number) => {
     if (selectedMonths.length <= 1) return;
     const copy = [...selectedMonths];
@@ -181,10 +244,11 @@ export default function SummaryPage() {
   const addMonth = () => {
     const last = selectedMonths[selectedMonths.length - 1];
     const [year, month] = last.split("-").map(Number);
-    const nextDate = new Date(year, month, 1); 
-    const nextMonthStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    // month is 1-indexed here, so month - 2 gives the previous month in Date's 0-indexed system
+    const prevDate = new Date(year, month - 2, 1); 
+    const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
     if (selectedMonths.length < 12) {
-      setSelectedMonths([...selectedMonths, nextMonthStr]);
+      setSelectedMonths([...selectedMonths, prevMonthStr]);
     }
   };
 
@@ -211,10 +275,10 @@ export default function SummaryPage() {
     const budget = getBudgetPlanValue(label);
     return (
       <tr key={label} className={cn("group border-b border-zinc-100 dark:border-zinc-800/50", isHeader && "bg-zinc-50/50 dark:bg-zinc-800/30 font-bold")}>
-        <td className="sticky left-0 z-10 py-2 pl-4 pr-4 bg-white dark:bg-zinc-900 group-hover:bg-zinc-50 dark:group-hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 text-sm truncate shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">
+        <td className="sticky left-0 z-10 py-2 pl-3 pr-2 sm:pl-4 sm:pr-4 bg-white dark:bg-zinc-900 group-hover:bg-zinc-50 dark:group-hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 text-[10px] sm:text-sm whitespace-normal sm:truncate break-words shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left w-[130px] sm:w-[260px]">
           {label}
         </td>
-        <td className="sticky left-[200px] sm:left-[260px] z-10 py-2 px-4 text-right tabular-nums text-violet-700 dark:text-violet-400 text-sm font-medium bg-violet-50 dark:bg-violet-950 group-hover:bg-violet-100 dark:group-hover:bg-violet-900 transition-colors border-r border-violet-200 dark:border-violet-800 shadow-[1px_0_0_0_rgba(139,92,246,0.2)] min-w-[120px] max-w-[130px] w-[125px]">
+        <td className="sticky left-[130px] sm:left-[260px] z-10 py-2 px-2 sm:px-4 text-right tabular-nums text-violet-700 dark:text-violet-400 text-[10px] sm:text-sm font-medium bg-violet-50 dark:bg-violet-950 group-hover:bg-violet-100 dark:group-hover:bg-violet-900 transition-colors border-r border-violet-200 dark:border-violet-800 shadow-[1px_0_0_0_rgba(139,92,246,0.2)] min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px]">
           {getBudgetPlan(label)}
         </td>
         {dataSeries.map((d, i) => {
@@ -224,13 +288,23 @@ export default function SummaryPage() {
             pct !== null &&
             ((highlightMode === "over" && pct > 100) ||
              (highlightMode === "under" && pct < 100));
+          const isDoubleClickDisabled = [
+            "Saldo Bulan Lalu", "Pengeluaran / Pemasukan", "Tabungan / Pemasukan",
+            "SALDO SYSTEM", "SALDO REAL", "SELISIH", "SALDO TABUNGAN", "TOTAL UANG", "SALDO BISA DI PAKAI"
+          ].includes(label);
+
           return (
-            <td key={i} className={cn(
-              "py-2 px-4 text-right tabular-nums text-sm font-medium transition-colors",
-              isHighlighted
-                ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
-                : "text-zinc-800 dark:text-zinc-200"
-            )}>
+            <td 
+              key={i} 
+              onDoubleClick={isDoubleClickDisabled ? undefined : () => handleCellDoubleClick(label, d)} 
+              className={cn(
+                "py-2 px-4 text-right tabular-nums text-sm font-medium transition-colors",
+                !isDoubleClickDisabled && "cursor-pointer hover:bg-black/5 dark:hover:bg-white/5",
+                isHighlighted
+                  ? "bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400"
+                  : "text-zinc-800 dark:text-zinc-200"
+              )}
+            >
               <div className="flex flex-col items-end gap-0">
                 <span>{accessor(d)}</span>
                 {pct !== null && (
@@ -267,7 +341,7 @@ export default function SummaryPage() {
       <td className="py-3 pl-4 sticky left-0 z-10 bg-inherit text-xs font-black uppercase tracking-widest shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left whitespace-nowrap">
         {label}
       </td>
-      <td className="sticky left-[200px] sm:left-[260px] z-10 bg-inherit border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
+      <td className="sticky left-[130px] sm:left-[260px] z-10 bg-inherit border-r border-violet-200 dark:border-violet-800 min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px]"></td>
       {dataSeries.map((_, i) => (
         <td key={i} className="bg-inherit"></td>
       ))}
@@ -308,19 +382,19 @@ export default function SummaryPage() {
               <table className="w-full text-left border-separate border-spacing-0">
                 <thead className="sticky top-0 z-30">
                   <tr className="bg-zinc-100 dark:bg-zinc-800">
-                    <th className="sticky left-0 z-40 py-4 pl-6 text-sm font-black text-zinc-500 uppercase tracking-widest w-[200px] sm:w-[260px] bg-zinc-100 dark:bg-zinc-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.05)] align-top text-left">
+                    <th className="sticky left-0 z-40 py-4 pl-4 sm:pl-6 text-sm font-black text-zinc-500 uppercase tracking-widest w-[130px] sm:w-[260px] bg-zinc-100 dark:bg-zinc-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_1px_0_0_rgba(255,255,255,0.05)] align-top text-left">
                        <div className="flex flex-col gap-3">
-                          <div className="flex items-center gap-2">
-                            <Link href="/dashboard" className="p-1.5 -ml-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-zinc-500">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <Link href="/dashboard" className="p-1 sm:p-1.5 -ml-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-zinc-500">
                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                   <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
                                </svg>
                             </Link>
-                            <span className="text-zinc-900 dark:text-zinc-100 font-black text-xs">SUMMARY REPORT</span>
+                            <span className="text-zinc-900 dark:text-zinc-100 font-black text-[10px] sm:text-xs">SUMMARY REPORT</span>
                           </div>
                        </div>
                     </th>
-                    <th className="sticky left-[200px] sm:left-[260px] z-40 py-4 px-4 text-right text-xs font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest min-w-[120px] max-w-[130px] w-[125px] bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 shadow-[1px_1px_0_0_rgba(139,92,246,0.25)] align-bottom">
+                    <th className="sticky left-[130px] sm:left-[260px] z-40 py-4 px-2 sm:px-4 text-right text-[10px] sm:text-xs font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px] bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 shadow-[1px_1px_0_0_rgba(139,92,246,0.25)] align-bottom">
                       Budget Plan
                     </th>
                     {selectedMonths.map((m, idx) => (
@@ -379,32 +453,32 @@ export default function SummaryPage() {
                   {/* A: PEMASUKAN */}
                   {renderSectionHeader("A: PEMASUKAN", "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/10 dark:text-emerald-400")}
                   {renderRow("Gaji", d => `Rp ${fmt(d.gaji)}`, false, undefined, false, d => d.gaji, "under")}
-                  {renderRow("Hutang", d => `Rp ${fmt(d.hutang)}`, true, d => d.hutang, false, d => d.hutang, "under")}
-                  {renderRow("Bunga Bank", d => `Rp ${fmt(d.bungaBank)}`, true, d => d.bungaBank, false, d => d.bungaBank, "under")}
-                  {renderRow("Lainnya", d => `Rp ${fmt(d.pemasukanLainnya)}`, true, d => d.pemasukanLainnya, false, d => d.pemasukanLainnya, "under")}
+                  {renderRow("Hutang", d => `Rp ${fmt(d.hutang)}`, false, d => d.hutang, false, d => d.hutang, "under")}
+                  {renderRow("Bunga Bank", d => `Rp ${fmt(d.bungaBank)}`, false, d => d.bungaBank, false, d => d.bungaBank, "under")}
+                  {renderRow("Pemasukan Lainnya", d => `Rp ${fmt(d.pemasukanLainnya)}`, false, d => d.pemasukanLainnya, false, d => d.pemasukanLainnya, "under")}
                   {renderRow("TOTAL PEMASUKAN", d => `Rp ${fmt(d.serverTotalPemasukan)}`, false, undefined, true, d => d.serverTotalPemasukan, "under")}
 
                   {/* B: PENGELUARAN */}
                   {renderSectionHeader("B: PENGELUARAN", "bg-rose-50 text-rose-600 dark:bg-rose-900/10 dark:text-rose-400")}
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
-                    <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B1: HIDUP KELUARGA</td>
-                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
+                    <td className="sticky left-0 z-10 py-2 pl-3 sm:pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left w-[130px] sm:w-[260px]">B1: HIDUP KELUARGA</td>
+                    <td className="sticky left-[130px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
                   {renderRecordRows(dataSeries[0]?.b1 || {}, "b1")}
                   
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
-                    <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B2: KELUARGA INTI</td>
-                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
+                    <td className="sticky left-0 z-10 py-2 pl-3 sm:pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left w-[130px] sm:w-[260px]">B2: KELUARGA INTI</td>
+                    <td className="sticky left-[130px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
                   {renderRecordRows(dataSeries[0]?.b2 || {}, "b2")}
 
                   <tr className="bg-zinc-50/10 dark:bg-zinc-800/10 font-black">
-                    <td className="sticky left-0 z-10 py-2 pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left">B4: LIBURAN & LAINNYA</td>
-                    <td className="sticky left-[200px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[120px] max-w-[130px] w-[125px]"></td>
+                    <td className="sticky left-0 z-10 py-2 pl-3 sm:pl-6 bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 uppercase shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] text-left w-[130px] sm:w-[260px]">B4: LIBURAN & LAINNYA</td>
+                    <td className="sticky left-[130px] sm:left-[260px] z-10 bg-violet-50 dark:bg-violet-950 border-r border-violet-200 dark:border-violet-800 min-w-[90px] max-w-[90px] w-[90px] sm:min-w-[120px] sm:max-w-[130px] sm:w-[125px]"></td>
                     {dataSeries.map((_, i) => <td key={i} className="bg-white dark:bg-zinc-950"></td>)}
                     {selectedMonths.length < 12 && <td className="bg-white dark:bg-zinc-950"></td>}
                   </tr>
@@ -447,6 +521,56 @@ export default function SummaryPage() {
           </div>
         </div>
       </div>
+
+      {popupData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{popupData.title}</h3>
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{popupData.subtitle}</p>
+              </div>
+              <button onClick={() => setPopupData(null)} className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5 flex-1 bg-zinc-50 dark:bg-zinc-950/50">
+              {popupData.transactions.length === 0 ? (
+                <div className="text-center py-10 text-zinc-500 dark:text-zinc-400 text-sm font-medium">
+                  Tidak ada transaksi.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {popupData.transactions.map((t, idx) => {
+                    const isIncome = t.category.startsWith("A:");
+                    const isTabungan = t.category.startsWith("C:");
+                    const amountColor = isIncome ? "text-emerald-600 dark:text-emerald-400" : isTabungan ? "text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-zinc-100";
+                    const sign = isIncome ? "+" : isTabungan ? "-" : "-";
+                    return (
+                      <div key={idx} className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 p-3 rounded-xl shadow-sm">
+                         <div className="flex justify-between items-start gap-2">
+                           <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{t.notes}</span>
+                           <span className={cn("font-bold text-sm whitespace-nowrap", amountColor)}>{sign}Rp {fmt(t.amount)}</span>
+                         </div>
+                         <div className="flex justify-between items-center mt-1">
+                           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{new Date(t.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} • {t.account}</span>
+                           <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 truncate max-w-[150px]">{t.category.split("~")[1] || t.category}</span>
+                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900">
+               <span className="text-xs font-semibold text-zinc-500">Total ({popupData.transactions.length})</span>
+               <span className="font-black text-zinc-900 dark:text-zinc-100">Rp {fmt(popupData.transactions.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0))}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
