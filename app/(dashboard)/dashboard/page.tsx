@@ -18,6 +18,8 @@ type TransactionRecord = {
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isHardRefreshing, setIsHardRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Layout States
@@ -47,10 +49,19 @@ export default function DashboardPage() {
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
   // Load Transactions
-  const loadData = async () => {
-    setIsLoading(true);
+  // silent=true   → keeps existing data visible, shows only a subtle refresh badge
+  // noCache=true  → sends noCache=1 to Apps Script to bypass its 5-minute cache
+  const loadData = async (silent = false, noCache = false) => {
+    if (noCache) {
+      setIsHardRefreshing(true);
+    } else if (silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
-      const res = await fetch("/api/transactions?t=" + Date.now());
+      const url = `/api/transactions?t=${Date.now()}${noCache ? "&noCache=1" : ""}`;
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setTransactions(json.data);
@@ -72,6 +83,8 @@ export default function DashboardPage() {
       console.error("Failed to load transactions", err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+      setIsHardRefreshing(false);
     }
   };
 
@@ -100,11 +113,12 @@ export default function DashboardPage() {
       });
       const json = await res.json();
       if (json.success) {
-        await loadData();
+        // Clear form immediately — don't wait for the refresh to finish
         setFormNotes("");
         setFormAmount("");
-        // Hide form on mobile optionally, but let's keep it visible
         notesRef.current?.focus();
+        // Refresh data silently in the background (no full-screen spinner)
+        loadData(true);
       } else {
         alert("Gagal menyimpan transaksi: " + json.error);
       }
@@ -322,17 +336,49 @@ export default function DashboardPage() {
       <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 sm:pb-32">
         <div className="mx-auto max-w-3xl space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Riwayat Transaksi</h2>
-            <select
-              value={daysFilter}
-              onChange={(e) => setDaysFilter(e.target.value)}
-              className="rounded-lg border-none bg-transparent px-2 py-1 text-sm font-medium text-zinc-500 outline-none hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
-            >
-              <option value="7">7 Hari Terakhir</option>
-              <option value="15">15 Hari Terakhir</option>
-              <option value="30">30 Hari Terakhir</option>
-              <option value="all">Semua Waktu</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Riwayat Transaksi</h2>
+              {isRefreshing && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Menyinkronkan...
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Hard-refresh button: bypasses Apps Script 5-min cache */}
+              <button
+                onClick={() => loadData(false, true)}
+                disabled={isHardRefreshing || isLoading}
+                title="Refresh dari Spreadsheet (abaikan cache)"
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-all hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                )}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className={cn("h-4 w-4", isHardRefreshing && "animate-spin")}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H5.498a.75.75 0 0 0-.75.75v3.272a.75.75 0 0 0 1.5 0v-1.43l.312.311a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V3.899a.75.75 0 0 0-1.5 0v1.43l-.311-.311A7 7 0 0 0 3.239 8.156a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.078l.311.311H11.769a.75.75 0 0 0 0 1.5h3.433a.75.75 0 0 0 .53-.219Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+              <select
+                value={daysFilter}
+                onChange={(e) => setDaysFilter(e.target.value)}
+                className="rounded-lg border-none bg-transparent px-2 py-1 text-sm font-medium text-zinc-500 outline-none hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <option value="7">7 Hari Terakhir</option>
+                <option value="15">15 Hari Terakhir</option>
+                <option value="30">30 Hari Terakhir</option>
+                <option value="all">Semua Waktu</option>
+              </select>
+            </div>
           </div>
 
           {isLoading ? (

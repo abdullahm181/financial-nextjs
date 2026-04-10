@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { addTransaction, getTransactions } from "@/services/transaction";
 
+// Always fetch fresh data — caching is handled by Apps Script CacheService
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const targetDate = searchParams.get("targetDate") || undefined;
-    const result = await getTransactions(targetDate);
+    const noCache    = searchParams.get("noCache") === "1";
+    const result = await getTransactions(targetDate, noCache);
     return NextResponse.json({ 
       success: true, 
       data: result.data, 

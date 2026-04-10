@@ -43,7 +43,7 @@ export async function addTransaction(data: {
   };
 }
 
-export async function getTransactions(targetDate?: string): Promise<{ 
+export async function getTransactions(targetDate?: string, noCache?: boolean): Promise<{ 
   data: TransactionRecord[], 
   saldoReal: number, 
   saldoTabungan: number,
@@ -54,5 +54,5 @@ export async function getTransactions(targetDate?: string): Promise<{
   period: { monthStr: string, cutStart: string, cutEnd: string } | null
 }> {
   // Fetch directly from Google Sheets
-  return await fetchFromSheet(targetDate);
+  return await fetchFromSheet(targetDate, noCache);
 }

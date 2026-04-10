@@ -1,7 +1,7 @@
 import { TransactionRecord } from "./transaction";
 
 const GOOGLE_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxY8O_pC3sJnApOOQLhNMUF9S8SBaj9I0ASm7s_R2UcDKobi3A0rLCTDQsjcSJuIiPq/exec";
+  "https://script.google.com/macros/s/AKfycbyaCw8qLiO_lef1yalXsSNXM8FQrbNrS8e656XdhXgWBzOJVn0cudNuzSHeujtlq3Db/exec";
 
 /**
  * Sends transaction data to a Google Apps Script Web App
@@ -45,7 +45,7 @@ export async function appendToSheet(data: {
 /**
  * Fetches all transactions directly from the spreadsheet via Google Apps Script.
  */
-export async function fetchFromSheet(targetDate?: string): Promise<{ 
+export async function fetchFromSheet(targetDate?: string, noCache?: boolean): Promise<{ 
   data: TransactionRecord[], 
   saldoReal: number, 
   saldoTabungan: number,
@@ -57,9 +57,11 @@ export async function fetchFromSheet(targetDate?: string): Promise<{
 }> {
   try {
     let url = GOOGLE_APPS_SCRIPT_URL;
-    if (targetDate) {
-      url += `?targetDate=${encodeURIComponent(targetDate)}`;
-    }
+    const params = new URLSearchParams();
+    if (targetDate) params.set("targetDate", targetDate);
+    if (noCache)    params.set("noCache", "1");
+    const qs = params.toString();
+    if (qs) url += "?" + qs;
     const res = await fetch(url, {
       method: "GET",
       cache: "no-store",
