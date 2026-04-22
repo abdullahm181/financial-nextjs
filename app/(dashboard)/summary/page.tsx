@@ -285,9 +285,9 @@ export default function SummaryPage() {
           const actual = numericValue ? numericValue(d) : null;
           const pct = (budget > 0 && actual !== null) ? (actual / budget) * 100 : null;
           const isHighlighted =
-            pct !== null &&
-            ((highlightMode === "over" && pct > 100) ||
-             (highlightMode === "under" && pct < 100));
+            actual !== null &&
+            ((highlightMode === "over" && actual > budget) ||
+             (highlightMode === "under" && actual < budget));
           const isDoubleClickDisabled = [
             "Saldo Bulan Lalu", "Pengeluaran / Pemasukan", "Tabungan / Pemasukan",
             "SALDO SYSTEM", "SALDO REAL", "SELISIH", "SALDO TABUNGAN", "TOTAL UANG", "SALDO BISA DI PAKAI"
