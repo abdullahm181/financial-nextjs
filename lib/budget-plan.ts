@@ -9,7 +9,7 @@ export const BUDGET_PLAN: Record<string, number> = {
   "Gaji": 10_000_000,
   "Hutang": 0,
   "Bunga Bank": 0,
-  "Lainnya": 0,
+  "Pemasukan Lainnya": 0,
   "TOTAL PEMASUKAN": 10_000_000,
   // B1: HIDUP KELUARGA
   "KPR/Kontrakan": 920_000,
@@ -37,7 +37,7 @@ export const BUDGET_PLAN: Record<string, number> = {
   // B4: LIBURAN & LAINNYA
   "Biaya Liburan General": 0,
   "Hilang": 0,
-  "Lainnya_B4": 200_000,
+  "Lainnya": 200_000,
   // TOTAL PENGELUARAN
   "TOTAL PENGELUARAN": 7_205_000,
   // C: TABUNGAN
