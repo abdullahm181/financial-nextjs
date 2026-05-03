@@ -13,7 +13,7 @@ export const BUDGET_PLAN: Record<string, number> = {
   "TOTAL PEMASUKAN": 10_000_000,
   // B1: HIDUP KELUARGA
   "KPR/Kontrakan": 920_000,
-  "Belanja Harian": 450_000,
+  "Belanja Harian": 500_000,
   "Belanja Bulanan": 1_000_000,
   "Makan di luar": 400_000,
   "Transportasi/Bensin": 500_000,
@@ -39,14 +39,14 @@ export const BUDGET_PLAN: Record<string, number> = {
   "Hilang": 0,
   "Lainnya": 200_000,
   // TOTAL PENGELUARAN
-  "TOTAL PENGELUARAN": 7_415_000,
+  "TOTAL PENGELUARAN": 7_465_000,
   // C: TABUNGAN
   "Dana darurat": 0,
-  "Dana tabungan Rumah": 2_585_000,
+  "Dana tabungan Rumah": 2_535_000,
   "Dana tabungan pendidikan anak": 0,
   "Dana tabungan parenting": 0,
   "Dana tabungan pensiun": 0,
-  "TOTAL TABUNGAN": 2_585_000,
+  "TOTAL TABUNGAN": 2_535_000,
   // RINGKASAN
   "Pengeluaran / Pemasukan": 0,
   "Tabungan / Pemasukan": 0,
